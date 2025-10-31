@@ -1,10 +1,20 @@
 #include "primitives.h"
 #include "backend.h"
-#include "utils/math.h"
+#include "math/math.h"
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static uint32_t r_mode = 0x00;
+
+void set_render_mode(const uint32_t mode) {
+	if(mode != 0x00 || mode != 0x01) {
+		return;
+	}
+	r_mode = mode;
+}
 
 void draw_2d_pixel(int x, int y, uint32_t color) {	
     if (x < 0 || x >= get_screen_width() || y < 0 || y >= get_screen_height()) return;
@@ -129,20 +139,42 @@ static void p_triangle(int ax, int ay, float az,
     }
 }
 
-void triangle(vec3 p0, vec3 p1, vec3 p2, uint32_t color) {
-	int ax = p0[0]; int ay = p0[1]; float az = p0[2];
-    int bx = p1[0]; int by = p1[1]; float bz = p1[2];
-    int cx = p2[0]; int cy = p2[1]; float cz = p2[2];
-	p_triangle(ax, ay, az,
-			 bx, by, bz,
-			 cx, cy, cz,
-			 color);
+void rasterized_triangle(vec3 *pts, uint32_t color) {
+	int ax = pts[0][0]; int ay = pts[0][1]; float az = pts[0][2];
+    int bx = pts[1][0]; int by = pts[1][1]; float bz = pts[1][2];
+    int cx = pts[2][0]; int cy = pts[2][1]; float cz = pts[2][2];
+	int bbminx = glm_min(glm_min(ax, bx), cx);
+    int bbminy = glm_min(glm_min(ay, by), cy);
+    int bbmaxx = glm_max(glm_max(ax, bx), cx);
+    int bbmaxy = glm_max(glm_max(ay, by), cy);
+    double ta = signed_triangle_area(ax, ay, bx, by, cx, cy);
+    if (fabs(ta) < 1) return;
+    for (int x=bbminx; x<=bbmaxx; x++) {
+        for (int y=bbminy; y<=bbmaxy; y++) {
+            double alpha = signed_triangle_area(x, y, bx, by, cx, cy) / ta;
+            double beta = signed_triangle_area(x, y, cx, cy, ax, ay) / ta;
+            double gamma = signed_triangle_area(x, y, ax, ay, bx, by) / ta;
+            if (alpha<0 || beta<0 || gamma<0) continue;
+            const float z = alpha * az + beta * bz + gamma * cz;
+            draw_3d_pixel(x, y, z, color);
+        }
+    }
 }
 
 void world_to_screen(const vec3 v, vec3 out) {
-    out[0] = (v[0] + 1.) * get_screen_width() / 2 + 0.5;
-    out[1] = (v[1] + 1.) * get_screen_height() / 2 + 0.5;
+    out[0] = (v[0] + 1.) * get_screen_width() / 2;
+    out[1] = (v[1] + 1.) * get_screen_height() / 2;
     out[2] = v[2];
+}
+
+void wireframe_triangle(vec3 *pts, const uint32_t color) {
+    draw_3d_line(pts[0],
+              pts[1],  color);
+    draw_3d_line(pts[1],
+              pts[2], color);
+
+    draw_3d_line(pts[2],
+              pts[0], color);
 }
 
 void render_triangle(const vec3 *v, ivec3 *f, const int nFaces, const uint32_t *colors) {
@@ -153,7 +185,12 @@ void render_triangle(const vec3 *v, ivec3 *f, const int nFaces, const uint32_t *
         for (int j = 0; j<3; j++) {
             world_to_screen(v[face[j]], pts[j]);
         }
-		triangle(pts[0], pts[1], pts[2], colors[i]);
+		switch(r_mode) {
+			case RAST_LINE_MODE:
+				wireframe_triangle(pts, colors[i]);
+			case RAST_FILL_MODE:
+				rasterized_triangle(pts, colors[i]);
+		}
     }
 }
 

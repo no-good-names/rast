@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <SDL3/SDL.h>
 
+#ifdef USE_OPENCL
+#include <CL/cl.h>
+#endif
+
 struct backend_state g_backend;
 
 struct backend_state *get_backend_state() {
@@ -14,6 +18,9 @@ struct backend_state *get_backend_state() {
 }
 
 void video_init(int window_width, int window_height, int screen_width, int screen_height) {
+#ifdef USE_OPENCL
+	printf("OpenCL is on\n");
+#endif
     g_backend.screen_width = screen_width;
     g_backend.screen_height = screen_height;
     g_backend.window_width = window_width;
@@ -58,9 +65,9 @@ void video_init(int window_width, int window_height, int screen_width, int scree
 }
 void video_update() {
     SDL_UpdateTexture(g_backend.texture, NULL, g_backend.pixels, g_backend.screen_width * sizeof(uint32_t));
-	SDL_RenderTexture(g_backend.renderer, g_backend.texture, NULL, NULL);
+	// SDL_RenderTexture(g_backend.renderer, g_backend.texture, NULL, NULL);
     // Use this to flip/rotate
-	// SDL_RenderTextureRotated(g_backend.renderer, g_backend.texture, NULL, NULL, 0.0f, NULL, SDL_FLIP_NONE);
+	SDL_RenderTextureRotated(g_backend.renderer, g_backend.texture, NULL, NULL, 0.0f, NULL, SDL_FLIP_NONE);
     SDL_RenderPresent(g_backend.renderer);
 }
 void video_destroy() {
