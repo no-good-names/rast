@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-option(RAST_USE_OPENCL "Enable OpenCL support" ON)
+option(RAST_USE_OPENCL "Enable OpenCL support" OFF)
 
 add_subdirectory(lib/sdl EXCLUDE_FROM_ALL)
 add_subdirectory(lib/cglm EXCLUDE_FROM_ALL)
@@ -21,12 +21,13 @@ endif ()
 
 list(APPEND RAST_LIBS SDL3::SDL3 cglm)
 
-if (RAST_USE_OPENCL)
-    find_package(OpenCL REQUIRED)
-    list(APPEND RAST_LIBS OpenCL::OpenCL)
-    list(APPEND RAST_DEFS CL_TARGET_OPENCL_VERSION=300 USE_OPENCL)
-	message(WARNING "OpenCL is not yet (fully) implemented and might not function correctly")
-endif()
+# TODO: Fix this
+#if (RAST_USE_OPENCL)
+#    find_package(OpenCL REQUIRED)
+#    list(APPEND RAST_LIBS OpenCL::OpenCL)
+#    list(APPEND RAST_DEFS CL_TARGET_OPENCL_VERSION=300 USE_OPENCL)
+#	message(WARNING "OpenCL is not yet (fully) implemented and might not function correctly")
+#endif()
 
 add_executable(rast
 	src/main.c
@@ -41,7 +42,9 @@ add_executable(rast
 	src/math/transform.c
 	src/math/transform.h
 	src/utils/utils.c
-	src/utils/utils.h)
+	src/utils/utils.h
+		src/math/vertex.c
+		src/math/vertex.h)
 
 target_link_libraries(rast PRIVATE ${RAST_LIBS})
 target_compile_definitions(rast PRIVATE ${RAST_DEFS})

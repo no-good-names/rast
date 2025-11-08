@@ -1,8 +1,9 @@
 #include "native_gl.h"
+#include "primitives.h"
 
 #include <cglm/cglm.h>
 
-// TODO: Make this stuff
+// TODO: Make this stuff link to the render thing.
 
 static mat4 mode;
 static mat4 view;

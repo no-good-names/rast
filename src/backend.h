@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <SDL3/SDL.h>
 
-struct backend_state {
+struct rast_backend_state {
 	uint32_t *pixels;
 	float *zbuffer;
 	SDL_Window *window;
@@ -16,7 +16,7 @@ struct backend_state {
 	int screen_width, screen_height;
 };
 
-struct backend_state *get_backend_state();
+struct rast_backend_state *get_backend_state();
 
 void video_init(int window_width, int window_height, int screen_width, int screen_height);
 void video_update();

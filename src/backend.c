@@ -1,7 +1,6 @@
 #include "backend.h"
 #include <float.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,15 +10,18 @@
 #include <CL/cl.h>
 #endif
 
-struct backend_state g_backend;
+struct rast_backend_state g_backend;
 
-struct backend_state *get_backend_state() {
+struct rast_backend_state *get_backend_state() {
 	return &g_backend;
 }
 
-void video_init(int window_width, int window_height, int screen_width, int screen_height) {
+void video_init(const int window_width, const int window_height,
+	const int screen_width, const int screen_height) {
 #ifdef USE_OPENCL
 	printf("OpenCL is on\n");
+	cl_int x;
+
 #endif
     g_backend.screen_width = screen_width;
     g_backend.screen_height = screen_height;
@@ -97,10 +99,9 @@ void event_update() {
 }
 
 void clear_pixelbuffer() {
-	size_t width  = (size_t)get_screen_width();
-    size_t height = (size_t)get_screen_height();
-    size_t area = width * height;
-    uint32_t color = 0xFF000000u;
+	// [ 0, max_width * screen_height - 1 ]
+    const size_t area =  (size_t)get_screen_width() * (size_t)get_screen_height();
+    uint32_t color = 0xFF000000;
     for (size_t i = 0; i < area; ++i) {
         g_backend.pixels[i] = color;
     }
