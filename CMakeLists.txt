@@ -21,28 +21,25 @@ endif ()
 
 list(APPEND RAST_LIBS SDL3::SDL3 cglm)
 
-# TODO: Fix this
-#if (RAST_USE_OPENCL)
-#    find_package(OpenCL REQUIRED)
-#    list(APPEND RAST_LIBS OpenCL::OpenCL)
-#    list(APPEND RAST_DEFS CL_TARGET_OPENCL_VERSION=300 USE_OPENCL)
-#	message(WARNING "OpenCL is not yet (fully) implemented and might not function correctly")
-#endif()
+if(RAST_USE_OPENCL STREQUAL "ON")
+    find_package(OpenCL REQUIRED)
+    list(APPEND RAST_LIBS OpenCL::OpenCL)
+    list(APPEND RAST_DEFS CL_TARGET_OPENCL_VERSION=300 USE_OPENCL)
+	message(WARNING "OpenCL is not yet (fully) implemented and might not function correctly")
+endif()
 
 add_executable(rast
-	src/main.c
-	src/backend.c
-	src/backend.h
-	src/primitives.c
-	src/primitives.h
-	src/native_gl.c
-	src/native_gl.h
-	src/math/math.c
-	src/math/math.h
-	src/math/transform.c
-	src/math/transform.h
-	src/utils/utils.c
-	src/utils/utils.h
+		src/main.c
+		src/backend.c
+		src/backend.h
+		src/primitives.c
+		src/primitives.h
+		src/math/math.c
+		src/math/math.h
+		src/math/transform.c
+		src/math/transform.h
+		src/utils/utils.c
+		src/utils/utils.h
 		src/math/vertex.c
 		src/math/vertex.h)
 

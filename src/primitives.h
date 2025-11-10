@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "math/math.h"
+#include "math/vertex.h"
 
 /*
  * TODO:
@@ -14,13 +15,13 @@ enum RAST_RENDER_MODE {
 };
 
 struct rast_render_state {
+	// render mode
 	uint32_t mode;
-	mat4 model_m;
-	mat4 view_m;
-	mat4 proj_m;
-	mat4 viewport_m;
+	// state matrix
+	mat4 s_matrix;
 
-	// TODO: Vertex buffers
+	Buffer_t *vbuffer;
+	Buffer_t *ibuffer;
 };
 
 struct rast_render_state *get_renderer_state();
@@ -36,7 +37,10 @@ void draw_2d_line(const vec2 p0, const vec2 p1, uint32_t color);
 void draw_3d_line(const vec2 p0, const vec2 p1, uint32_t color);
 void rasterized_triangle(const vec3 *pts, uint32_t color);
 void wireframe_triangle(const vec3 *pts, uint32_t color);
-void render_triangle(const vec3 *v, ivec3 *f, int nFaces, const uint32_t *colors);
+// void render_triangle(const vec3 *v, ivec3 *f, int nFaces, const uint32_t *colors);
+void render_set_buffer(Buffer_t *buffer);
+void render_set_matrix(const mat4 *m);
+void render();
 
 void draw_circle(int x, int y, int r, uint32_t color);
 // Clearing Functions

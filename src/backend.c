@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <SDL3/SDL.h>
 
+#include "primitives.h"
+
 #ifdef USE_OPENCL
 #include <CL/cl.h>
 #endif
@@ -20,13 +22,12 @@ void video_init(const int window_width, const int window_height,
 	const int screen_width, const int screen_height) {
 #ifdef USE_OPENCL
 	printf("OpenCL is on\n");
-	cl_int x;
-
 #endif
     g_backend.screen_width = screen_width;
     g_backend.screen_height = screen_height;
     g_backend.window_width = window_width;
     g_backend.window_height = window_height;
+	g_backend.flags = 0x0;
     if (SDL_Init(SDL_INIT_VIDEO) == false) {
 		printf("SDL_Init Error: %s\n", SDL_GetError());
 		exit(1);
@@ -62,16 +63,20 @@ void video_init(const int window_width, const int window_height,
         printf("Failed to allocate memory for zbuffer\n");
         exit(1);
     }
-	clear_pixelbuffer();
+	clear_pbuffer();
 	clear_zbuffer();
+	render_init();
 }
+
 void video_update() {
-    SDL_UpdateTexture(g_backend.texture, NULL, g_backend.pixels, g_backend.screen_width * sizeof(uint32_t));
-	// SDL_RenderTexture(g_backend.renderer, g_backend.texture, NULL, NULL);
-    // Use this to flip/rotate
-	SDL_RenderTextureRotated(g_backend.renderer, g_backend.texture, NULL, NULL, 0.0f, NULL, SDL_FLIP_NONE);
-    SDL_RenderPresent(g_backend.renderer);
+    SDL_UpdateTexture(g_backend.texture, NULL, g_backend.pixels, g_backend.screen_width * (int) sizeof(uint32_t));
+	if (video_check_flag(RAST_VIDEO_FLIP))
+		SDL_RenderTextureRotated(g_backend.renderer, g_backend.texture, NULL, NULL, 0.0f, NULL, SDL_FLIP_VERTICAL);
+	else
+		SDL_RenderTexture(g_backend.renderer, g_backend.texture, NULL, NULL);
+	SDL_RenderPresent(g_backend.renderer);
 }
+
 void video_destroy() {
     fprintf(stderr, "Destroying video\n");
     free(g_backend.pixels);
@@ -84,6 +89,11 @@ void video_destroy() {
     SDL_Quit();
     exit(0);
 }
+
+void video_set_flags	(const uint32_t flags) { g_backend.flags = flags;				}
+void video_enable_flags	(const uint32_t flags) { g_backend.flags |= flags;				}
+void video_disable_flags(const uint32_t flags) { g_backend.flags &= ~flags;				}
+int  video_check_flag	(const uint32_t flags) { return (g_backend.flags & flags) != 0; }
 
 void event_update() {
 	SDL_Event event;
@@ -98,48 +108,30 @@ void event_update() {
 	}
 }
 
-void clear_pixelbuffer() {
+void clear_pbuffer() {
 	// [ 0, max_width * screen_height - 1 ]
-    const size_t area =  (size_t)get_screen_width() * (size_t)get_screen_height();
-    uint32_t color = 0xFF000000;
-    for (size_t i = 0; i < area; ++i) {
-        g_backend.pixels[i] = color;
+	for (size_t i = 0; i < (size_t)get_screen_width() * (size_t)get_screen_height(); ++i) {
+		g_backend.pixels[i] = 0xFF000000;
     }
 }
+
 void clear_zbuffer() {
-	// [ 0, max_width * screen_height - 1 ]
-    size_t width = (size_t)get_screen_width();
-    size_t height = (size_t)get_screen_height();
-    size_t area = width * height;
-    for (size_t i = 0; i < area; ++i) {
+	// [ 0, max_width * screen_height - 1 ]=
+    for (size_t i = 0; i < (size_t)get_screen_width() * (size_t)get_screen_height(); ++i) {
         g_backend.zbuffer[i] = FLT_MAX;
 	}
 }
 
 void clear_screen() {
-	clear_pixelbuffer();
+	clear_pbuffer();
 	clear_zbuffer();
 }
 
 int get_window_width() {
 	return g_backend.window_width;
 }
-int get_window_height() {
-	return g_backend.window_height;
-}
-
-int get_screen_width() {
-	return g_backend.screen_width;
-}
-
-int get_screen_height() {
-	return g_backend.screen_height;
-}
-
-uint32_t *get_pixels() {
-	return g_backend.pixels;
-}
-
-bool get_status() {
-	return g_backend.running;
-}
+int get_window_height() { return g_backend.window_height; }
+int get_screen_width() { return g_backend.screen_width; }
+int get_screen_height() { return g_backend.screen_height; }
+uint32_t *get_pixels() { return g_backend.pixels; }
+bool get_status() { return g_backend.running; }

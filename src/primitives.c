@@ -15,9 +15,9 @@ struct rast_render_state *get_renderer_state() {
 
 void render_init() {
     r_state.mode = RAST_LINE_MODE;
-    glm_mat4_identity(r_state.model_m);
-    glm_mat4_identity(r_state.view_m);
-    glm_mat4_identity(r_state.proj_m);
+    glm_mat4_identity(r_state.s_matrix);
+    r_state.ibuffer = NULL;
+    r_state.vbuffer = NULL;
 }
 
 void set_render_mode(const uint32_t mode) {
@@ -152,10 +152,10 @@ void rasterized_triangle(const vec3 *pts, const uint32_t color) {
     }
 }
 
-void world_to_screen(const vec3 v, vec3 out) {
-    out[0] = (v[0] + 1.) * get_screen_width() / 2;
-    out[1] = (v[1] + 1.) * get_screen_height() / 2;
-    out[2] = v[2];
+void world_to_screen(const float v[3], float out[3]) {
+    out[0] = (v[0] + 1.0f) * get_screen_width() / 2;
+    out[1] = (v[1] + 1.0f) * get_screen_height() / 2;
+    out[2] = (v[2] + 1.0f) * 255.0f/2;
 }
 
 void wireframe_triangle(const vec3 *pts, const uint32_t color) {
@@ -197,6 +197,76 @@ void draw_circle(const int x, const int y, const int r, const uint32_t color) {
             if (dx*dx + dy*dy <= r*r) {
                 draw_2d_pixel(x + dx, y + dy, color);
             }
+        }
+    }
+}
+
+// Sets
+void render_set_buffer(Buffer_t *buffer) {
+    if (!buffer) {
+        printf("render_set_buffer called with NULL\n");
+        return;
+    }
+    switch (buffer->type) {
+        case RAST_VERTEX_BUFFER:
+            r_state.vbuffer = buffer;
+            break;
+        case RAST_INDEX_BUFFER:
+            r_state.ibuffer = buffer;
+            break;
+        default:
+            printf("Unknown data type\n");
+            break;
+    }
+}
+
+void render_set_matrix(const mat4 *m) {
+    if (!m) return;
+    memcpy(r_state.s_matrix, *m, sizeof(mat4)); // NO *, copy from pointer directly
+}
+
+void render() {
+    if (!r_state.vbuffer || !r_state.vbuffer->vdata) {
+        printf("Invalid vertex buffer\n");
+        return;
+    }
+    if (!r_state.ibuffer || !r_state.ibuffer->idata) {
+        printf("Invalid index buffer\n");
+        return;
+    }
+    for (int i = 0; i < r_state.ibuffer->size; i++) {
+        ivec3 face;
+        m_ivec3_copy(r_state.ibuffer->idata[i].index, face);
+
+        vec3 pts[3];
+        for (int j = 0; j < 3; j++) {
+            vec4 transformed;
+
+            transformed[0] = r_state.vbuffer->vdata[face[j]].position[0];
+            transformed[1] = r_state.vbuffer->vdata[face[j]].position[1];
+            transformed[2] = r_state.vbuffer->vdata[face[j]].position[2];
+            transformed[3] = 1.0f;
+
+            vec4 result;
+            glm_mat4_mulv(r_state.s_matrix, transformed, result);
+
+            pts[j][0] = result[0] / result[3];
+            pts[j][1] = result[1] / result[3];
+            pts[j][2] = result[2] / result[3];
+
+            // Then convert to screen coordinates
+            world_to_screen(pts[j], pts[j]);
+        }
+
+        switch (r_state.mode) {
+            case RAST_LINE_MODE:
+                wireframe_triangle(pts, 0xFFFFFFFF);
+                break;
+            case RAST_FILL_MODE:
+                rasterized_triangle(pts, r_state.ibuffer->idata[i].color);
+                break;
+            default:
+                break;
         }
     }
 }
