@@ -6,55 +6,16 @@
 
 #include <string.h>
 
-// TODO:
-
-// VertexBuffer_t *vb_create(const size_t size) {
-// 	VertexBuffer_t *vb = malloc(sizeof(VertexBuffer_t));
-// 	vb->size = size;
-// 	vb->data = calloc(size, sizeof(Vertex_t));
-// 	return vb;
-// }
-//
-// void vb_destroy(VertexBuffer_t *vb) {
-// 	free(vb);
-// }
-//
-// void vb_set(VertexBuffer_t *vb, const Vertex_t *data, const size_t size) {
-// 	if (!vb || !data || size > vb->size) {
-// 		return;
-// 	}
-// 	memcpy(vb->data, data, size * sizeof(Vertex_t));
-// }
-//
-// IndexBuffer_t *ib_create(const size_t size) {
-// 	IndexBuffer_t *ib = malloc(sizeof(VertexBuffer_t));
-// 	ib->size = size;
-// 	ib->data = calloc(size, sizeof(Vertex_t));
-// 	return ib;
-// }
-//
-// void ib_destroy(IndexBuffer_t *ib) {
-// 	free(ib);
-// }
-//
-// void ib_set(IndexBuffer_t *ib, const Vertex_t *data, const size_t size) {
-// 	if (!ib || !data || size > ib->size) {
-// 		return;
-// 	}
-// 	memcpy(ib->data, data, size * sizeof(Vertex_t));
-// }
-
-
-void buffer_create(Buffer_t *buffer, const BufferType_t type, const size_t size) {
+void rast_create_buffer(Buffer_t *buffer, const BufferType_t type, const size_t size) {
 	buffer->type = type;
-	buffer->size = size;
+	buffer->size_bytes = size;
 
 	switch (type) {
 		case RAST_VERTEX_BUFFER:
-			buffer->vdata = malloc(sizeof(Vertex_t) * size);
+			buffer->vertex_data = malloc(sizeof(Vertex_t) * size);
 			break;
 		case RAST_INDEX_BUFFER:
-			buffer->idata = malloc(sizeof(Index_t) * size);
+			buffer->index_data = malloc(sizeof(Index_t) * size);
 			break;
 		default:
 			buffer->raw = NULL;
@@ -62,13 +23,14 @@ void buffer_create(Buffer_t *buffer, const BufferType_t type, const size_t size)
 			break;
 	}
 }
-void buffer_destroy(const Buffer_t *buffer) {
+
+void rast_destroy_buffer(const Buffer_t *buffer) {
 	switch (buffer->type) {
 		case RAST_VERTEX_BUFFER:
-			free(buffer->vdata);
+			free(buffer->vertex_data);
 			break;
 		case RAST_INDEX_BUFFER:
-			free(buffer->idata);
+			free(buffer->index_data);
 			break;
 		default:
 			printf("No buffer to be destroyed\n");
@@ -76,27 +38,27 @@ void buffer_destroy(const Buffer_t *buffer) {
 	}
 }
 
-void buffer_set(Buffer_t *buffer, const void *data) {
+void rast_set_buffer(Buffer_t *buffer, const void *data) {
 	if (!buffer || !data) {
 		fprintf(stderr, "Invalid parameters\n");
 		return;
 	}
 	switch (buffer->type) {
 		case RAST_VERTEX_BUFFER:
-			buffer->vdata = realloc(buffer->vdata, sizeof(Vertex_t) * buffer->size);
-			if (!buffer->vdata) {
+			buffer->vertex_data = realloc(buffer->vertex_data, sizeof(Vertex_t) * buffer->size_bytes);
+			if (!buffer->vertex_data) {
 				fprintf(stderr, "buffer_set: vertex buffer allocation failed\n");
 				return;
 			}
-			memcpy(buffer->vdata, data, sizeof(Vertex_t) * buffer->size);
+			memcpy(buffer->vertex_data, data, sizeof(Vertex_t) * buffer->size_bytes);
 			break;
 		case RAST_INDEX_BUFFER:
-			buffer->idata = realloc(buffer->idata, sizeof(Index_t) * buffer->size);
-			if (!buffer->idata) {
+			buffer->index_data = realloc(buffer->index_data, sizeof(Index_t) * buffer->size_bytes);
+			if (!buffer->index_data) {
 				fprintf(stderr, "buffer_set: vertex buffer allocation failed\n");
 				return;
 			}
-			memcpy(buffer->idata, data, sizeof(Index_t) * buffer->size);
+			memcpy(buffer->index_data, data, sizeof(Index_t) * buffer->size_bytes);
 			break;
 		default:
 			buffer->raw = NULL;

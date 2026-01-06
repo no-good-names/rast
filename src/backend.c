@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <SDL3/SDL.h>
 
-#include "primitives.h"
-
 #ifdef USE_OPENCL
 #include <CL/cl.h>
 #endif
@@ -18,7 +16,7 @@ struct rast_backend_state *get_backend_state() {
 	return &g_backend;
 }
 
-void video_init(const int window_width, const int window_height,
+void rast_video_init(const int window_width, const int window_height,
 	const int screen_width, const int screen_height) {
 #ifdef USE_OPENCL
 	printf("OpenCL is on\n");
@@ -63,21 +61,20 @@ void video_init(const int window_width, const int window_height,
         printf("Failed to allocate memory for zbuffer\n");
         exit(1);
     }
-	clear_pbuffer();
-	clear_zbuffer();
-	render_init();
+	rast_clear_pixel_buffer();
+	rast_clear_z_buffer();
 }
 
-void video_update() {
+void rast_video_update() {
     SDL_UpdateTexture(g_backend.texture, NULL, g_backend.pixels, g_backend.screen_width * (int) sizeof(uint32_t));
-	if (video_check_flag(RAST_VIDEO_FLIP))
+	if (rast_video_check_flag(RAST_VIDEO_FLIP))
 		SDL_RenderTextureRotated(g_backend.renderer, g_backend.texture, NULL, NULL, 0.0f, NULL, SDL_FLIP_VERTICAL);
 	else
 		SDL_RenderTexture(g_backend.renderer, g_backend.texture, NULL, NULL);
 	SDL_RenderPresent(g_backend.renderer);
 }
 
-void video_destroy() {
+void rast_video_destroy() {
     fprintf(stderr, "Destroying video\n");
     free(g_backend.pixels);
     free(g_backend.zbuffer);
@@ -90,12 +87,12 @@ void video_destroy() {
     exit(0);
 }
 
-void video_set_flags	(const uint32_t flags) { g_backend.flags = flags;				}
-void video_enable_flags	(const uint32_t flags) { g_backend.flags |= flags;				}
-void video_disable_flags(const uint32_t flags) { g_backend.flags &= ~flags;				}
-int  video_check_flag	(const uint32_t flags) { return (g_backend.flags & flags) != 0; }
+void rast_video_set_flags		(const uint32_t flags) { g_backend.flags = flags;				}
+void rast_video_enable_flags	(const uint32_t flags) { g_backend.flags |= flags;				}
+void rast_video_disable_flags	(const uint32_t flags) { g_backend.flags &= ~flags;				}
+int  rast_video_check_flag		(const uint32_t flags) { return (g_backend.flags & flags) != 0; }
 
-void event_update() {
+void rast_event_update() {
 	SDL_Event event;
 	while(SDL_PollEvent(&event)) {
 		switch(event.type) {
@@ -108,23 +105,39 @@ void event_update() {
 	}
 }
 
-void clear_pbuffer() {
+static uint32_t screen_clear_color = 0xFF000000;
+
+void rast_clear_pixel_buffer() {
 	// [ 0, max_width * screen_height - 1 ]
 	for (size_t i = 0; i < (size_t)get_screen_width() * (size_t)get_screen_height(); ++i) {
-		g_backend.pixels[i] = 0xFF000000;
+		g_backend.pixels[i] = screen_clear_color;
     }
 }
 
-void clear_zbuffer() {
+void rast_clear_z_buffer() {
 	// [ 0, max_width * screen_height - 1 ]=
     for (size_t i = 0; i < (size_t)get_screen_width() * (size_t)get_screen_height(); ++i) {
         g_backend.zbuffer[i] = FLT_MAX;
 	}
 }
 
-void clear_screen() {
-	clear_pbuffer();
-	clear_zbuffer();
+void rast_clear_screen() {
+	rast_clear_pixel_buffer();
+	rast_clear_z_buffer();
+}
+
+void rast_set_clear_color(float r, float g, float b, float a) {
+	if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;
+	if (g < 0.0f) g = 0.0f; if (g > 1.0f) g = 1.0f;
+	if (b < 0.0f) b = 0.0f; if (b > 1.0f) b = 1.0f;
+	if (a < 0.0f) a = 0.0f; if (a > 1.0f) a = 1.0f;
+
+	const uint8_t R = (uint8_t)(r * 255.0f);
+	const uint8_t G = (uint8_t)(g * 255.0f);
+	const uint8_t B = (uint8_t)(b * 255.0f);
+	const uint8_t A = (uint8_t)(a * 255.0f);
+
+	screen_clear_color = (A << 24) | (R << 16) | (G << 8) | B;
 }
 
 int get_window_width() {

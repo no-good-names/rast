@@ -15,37 +15,35 @@ enum RAST_RENDER_MODE {
 	RAST_FILL_MODE = 0x01,
 };
 
-struct rast_render_state {
+typedef struct {
 	// render mode
 	uint32_t mode;
 	// state matrix
 	mat4 s_matrix;
 
-	Buffer_t *vbuffer;
-	Buffer_t *ibuffer;
-};
+	Buffer_t *vertex_buffer;
+	Buffer_t *index_buffer;
+} rast_render_state_t;
 
-struct rast_render_state *get_renderer_state();
+extern rast_render_state_t r_state;
 
-void render_init();
+void rast_init();
 
-void set_render_mode(uint32_t mode);
+void rast_set_render_mode(uint32_t mode);
 
 // Draw Functions
-void draw_2d_pixel(int x, int y, uint32_t color);
-void draw_3d_pixel(int x, int y, float z, uint32_t color);
-void draw_2d_line(const vec2 p0, const vec2 p1, uint32_t color);
-void draw_3d_line(const vec2 p0, const vec2 p1, uint32_t color);
-void rasterized_triangle(const vec3 *pts, uint32_t color);
-void wireframe_triangle(const vec3 *pts, uint32_t color);
+void rast_draw_2d_pixel(int x, int y, uint32_t color);
+void rast_draw_3d_pixel(int x, int y, float z, uint32_t color);
+void rast_draw_2d_line(const vec2 p0, const vec2 p1, uint32_t color);
+void rast_draw_3d_line(const vec2 p0, const vec2 p1, uint32_t color);
+void rast_draw_rasterized_triangle(const vec3 *pts, uint32_t color);
+void rast_draw_wireframe_triangle(const vec3 *pts, uint32_t color);
 DEPRECATED("Use the object buffers instead")
-void render_triangle(const vec3 *v, ivec3 *f, int nFaces, const uint32_t *colors);
-void render_set_buffer(Buffer_t *buffer);
-void render_set_matrix(const mat4 *m);
-void render();
+void rast_draw_triangles(const vec3 *v, ivec3 *f, int nFaces, const uint32_t *colors);
+void rast_use_buffer(Buffer_t *buffer);
+void rast_set_matrix(const mat4 *m);
+void rast_render();
 
-void draw_circle(int x, int y, int r, uint32_t color);
-// Clearing Functions
-void clear_color(uint32_t color);
+void rast_draw_circle(int x, int y, int r, uint32_t color);
 
 #endif

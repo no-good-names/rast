@@ -57,41 +57,44 @@ static Index_t cube_is[12] = {
 };
 
 int main() {
-    video_init(600, 600, 600, 600);
+    rast_video_init(600, 600, 600, 600);
+	rast_init();
 	
     mat4 projection;
     glm_perspective_lh_no(glm_rad(60.0f), 1, 0.1f, 100.0f, projection);
 
     float angle = 0.0f;
-    set_render_mode(RAST_FILL_MODE);
+    rast_set_render_mode(RAST_FILL_MODE);
 	float currentTime = (float)SDL_GetTicks() / 1000.0f;
 	float lastTime = currentTime;
 
-	video_enable_flags(RAST_VIDEO_FLIP);
+	rast_video_enable_flags(RAST_VIDEO_FLIP);
 
-	// IMPORTANT: Make sure to set the size
+	// IMPORTANT: Make sure to set the size correctly
 	Buffer_t vbo, ibo;
-	buffer_create(&vbo, RAST_VERTEX_BUFFER, 5);
-	buffer_set(&vbo, pyramid_vs);
-	buffer_create(&ibo, RAST_INDEX_BUFFER, 6);
-	buffer_set(&ibo, pyramid_fs);
+	rast_create_buffer(&vbo, RAST_VERTEX_BUFFER, 5);
+	rast_set_buffer(&vbo, pyramid_vs);
+	rast_create_buffer(&ibo, RAST_INDEX_BUFFER, 6);
+	rast_set_buffer(&ibo, pyramid_fs);
 
 	Buffer_t vbo1, ibo1;
-	buffer_create(&vbo1, RAST_VERTEX_BUFFER, 8);
-	buffer_set(&vbo1, cube_vs);
-	buffer_create(&ibo1, RAST_INDEX_BUFFER, 12);
-	buffer_set(&ibo1, cube_is);
+	rast_create_buffer(&vbo1, RAST_VERTEX_BUFFER, 8);
+	rast_set_buffer(&vbo1, cube_vs);
+	rast_create_buffer(&ibo1, RAST_INDEX_BUFFER, 12);
+	rast_set_buffer(&ibo1, cube_is);
 
-	render_set_buffer(&vbo1);
-	render_set_buffer(&ibo1);
+	rast_use_buffer(&vbo);
+	rast_use_buffer(&ibo);
 
 	while (get_status()) {
 		const float speed = 1.0f;
 		currentTime = (float)SDL_GetTicks() / 1000.0f;
 		const float dt = (currentTime - lastTime);
 		lastTime = currentTime;
-        event_update();
-        clear_screen();
+        rast_event_update();
+        rast_clear_screen();
+
+		rast_set_clear_color(0.2f, 0.3f, 0.3f, 1.0f);
 
 		mat4 model, view, proj;
 		glm_mat4_identity(model);
@@ -105,19 +108,19 @@ int main() {
 		glm_mat4_mul(proj, view, mvp);
 		glm_mat4_mul(mvp, model, mvp);
 
-		render_set_matrix(&mvp);
-		render();
+		rast_set_matrix(&mvp);
+		rast_render();
 
 
-        video_update();
+        rast_video_update();
 		angle += 1.0f * speed * dt;
     }
-	buffer_destroy(&vbo);
-	buffer_destroy(&ibo);
+	rast_destroy_buffer(&vbo);
+	rast_destroy_buffer(&ibo);
 
-	buffer_destroy(&vbo1);
-	buffer_destroy(&ibo1);
-    video_destroy();
+	rast_destroy_buffer(&vbo1);
+	rast_destroy_buffer(&ibo1);
+    rast_video_destroy();
     return 0;
 }
 

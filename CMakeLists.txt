@@ -41,7 +41,9 @@ add_executable(rast
 		src/utils/utils.c
 		src/utils/utils.h
 		src/math/vertex.c
-		src/math/vertex.h)
+		src/math/vertex.h
+        src/shader.c
+        src/shader.h)
 
 target_link_libraries(rast PRIVATE ${RAST_LIBS})
 target_compile_definitions(rast PRIVATE ${RAST_DEFS})
