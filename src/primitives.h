@@ -25,7 +25,7 @@ typedef struct {
 	Buffer_t *index_buffer;
 } rast_render_state_t;
 
-extern rast_render_state_t r_state;
+extern rast_render_state_t rast_render_state_g;
 
 void rast_init();
 

@@ -1,5 +1,5 @@
 /*
- * FLAT SHADING DEMO AND STUFF
+ * RASTERIZER
  * by no-good-names
  * https://github.com/no-good-names/rast
  */
@@ -18,42 +18,48 @@
 #include "cglm/clipspace/persp_lh_zo.h"
 #include "math/vertex.h"
 
-static Vertex_t pyramid_vs[5] = {
-	{{ 0.0f,	 1.0f,	0.0f},{0}, 0x0},
-	{{-1.0f,	-1.0f, -1.0f},{0}, 0x0},
-	{{ 1.0f,	-1.0f, -1.0f},{0}, 0x0},
-	{{-1.0f,	-1.0f,	1.0f},{0}, 0x0},
-	{{ 1.0f,	-1.0f,	1.0f},{0}, 0x0},
+static float pyramid_vs[15] = {
+	 0.0f,	 1.0f,	0.0f,
+	-1.0f,	-1.0f, -1.0f,
+	 1.0f,	-1.0f, -1.0f,
+	-1.0f,	-1.0f,	1.0f,
+	 1.0f,	-1.0f,	1.0f,
 };
 
-static Index_t pyramid_fs[6] = {
-	{{0, 1, 2}, 0xFFFF0000},
-	{{0, 3, 4}, 0xFF00FF00},
-	{{0, 1, 3}, 0xFF0000FF},
+static float pyramid_is[18] = {
+	0, 1, 2,
+	0, 3, 4,
+	0, 1, 3,
 
-	{{0, 2, 4}, 0xFFFFFF00},
-	{{1, 3, 4}, 0xFFFF00FF},
-	{{1, 2, 4}, 0xFFFF00FF},
+	0, 2, 4,
+	1, 3, 4,
+	1, 2, 4,
 };
 
-static Vertex_t cube_vs[8] = {
-	{{-1.0f,  1.0f, -1.0f},{0}, 0x0},
-	{{ 1.0f,  1.0f, -1.0f},{0}, 0x0},
-	{{-1.0f, -1.0f, -1.0f},{0}, 0x0},
-	{{ 1.0f, -1.0f, -1.0f},{0}, 0x0},
-	{{-1.0f,  1.0f,  1.0f},{0}, 0x0},
-	{{ 1.0f,  1.0f,  1.0f},{0}, 0x0},
-	{{-1.0f, -1.0f,  1.0f},{0}, 0x0},
-	{{ 1.0f, -1.0f,  1.0f},{0}, 0x0}
+static float cube_vs[24] = {
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
 };
 
-static Index_t cube_is[12] = {
-	{{0, 1, 2}, 0xFFFF0000}, {{1, 2, 3}, 0xFFFF0000},
-	{{4, 6, 7}, 0xFF00FF00}, {{4, 5, 7}, 0xFF00FF00},
-	{{5, 7, 3}, 0xFF0000FF}, {{5, 1, 3}, 0xFF0000FF},
-	{{4, 0, 6}, 0xFFFFFF00}, {{0, 2, 6}, 0xFFFFFF00},
-	{{4, 5, 1}, 0xFF00FFFF}, {{4, 0, 1}, 0xFF00FFFF},
-	{{6, 7, 2}, 0xFFFF00FF}, {{7, 2, 3}, 0xFFFF00FF},
+static unsigned int cube_is[36] = {
+	0, 1, 2,
+	1, 2, 3,
+	4, 6, 7,
+	4, 5, 7,
+	5, 7, 3,
+	5, 1, 3,
+	4, 0, 6,
+	0, 2, 6,
+	4, 5, 1,
+	4, 0, 1,
+	6, 7, 2,
+	7, 2, 3,
 };
 
 int main() {
@@ -64,7 +70,7 @@ int main() {
     glm_perspective_lh_no(glm_rad(60.0f), 1, 0.1f, 100.0f, projection);
 
     float angle = 0.0f;
-    rast_set_render_mode(RAST_FILL_MODE);
+    rast_set_render_mode(RAST_LINE_MODE);
 	float currentTime = (float)SDL_GetTicks() / 1000.0f;
 	float lastTime = currentTime;
 
@@ -72,16 +78,16 @@ int main() {
 
 	// IMPORTANT: Make sure to set the size correctly
 	Buffer_t vbo, ibo;
-	rast_create_buffer(&vbo, RAST_VERTEX_BUFFER, 5);
-	rast_set_buffer(&vbo, pyramid_vs);
-	rast_create_buffer(&ibo, RAST_INDEX_BUFFER, 6);
-	rast_set_buffer(&ibo, pyramid_fs);
+	rast_create_buffer(&vbo, RAST_VERTEX_BUFFER, sizeof(float) * 24);
+	rast_set_buffer(&vbo, cube_vs);
+	rast_create_buffer(&ibo, RAST_INDEX_BUFFER, sizeof(unsigned int) * 36);
+	rast_set_buffer(&ibo, cube_is);
 
 	Buffer_t vbo1, ibo1;
-	rast_create_buffer(&vbo1, RAST_VERTEX_BUFFER, 8);
-	rast_set_buffer(&vbo1, cube_vs);
-	rast_create_buffer(&ibo1, RAST_INDEX_BUFFER, 12);
-	rast_set_buffer(&ibo1, cube_is);
+	rast_create_buffer(&vbo1, RAST_VERTEX_BUFFER, sizeof(float) * 15);
+	rast_set_buffer(&vbo1, pyramid_vs);
+	rast_create_buffer(&ibo1, RAST_INDEX_BUFFER, sizeof(unsigned int) * 18);
+	rast_set_buffer(&ibo1, pyramid_is);
 
 	rast_use_buffer(&vbo);
 	rast_use_buffer(&ibo);
@@ -100,7 +106,7 @@ int main() {
 		glm_mat4_identity(model);
 		glm_translate(model, (vec3){0,0,5});
 
-		glm_rotate(model, angle, (vec3) {1.0f, 1.0f, 0.0f});
+		glm_rotate(model, angle, (vec3) {1.0f, 0.75f, 0.25f});
 		glm_mat4_identity(view);
 		glm_perspective_lh_no(glm_rad(60.0f), 1.0f, 0.1f, 100.0f, proj);
 
@@ -120,6 +126,7 @@ int main() {
 
 	rast_destroy_buffer(&vbo1);
 	rast_destroy_buffer(&ibo1);
+
     rast_video_destroy();
     return 0;
 }

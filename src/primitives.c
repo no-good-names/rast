@@ -5,20 +5,20 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-rast_render_state_t r_state = { 0 };
+rast_render_state_t rast_render_state_g = { 0 };
 
 void rast_init() {
-    r_state.mode = RAST_LINE_MODE;
-    glm_mat4_identity(r_state.s_matrix);
-    r_state.index_buffer = NULL;
-    r_state.vertex_buffer = NULL;
+    rast_render_state_g.mode = RAST_LINE_MODE;
+    glm_mat4_identity(rast_render_state_g.s_matrix);
+    rast_render_state_g.index_buffer = 0;
+    rast_render_state_g.vertex_buffer = 0;
 }
 
 void rast_set_render_mode(const uint32_t mode) {
 	if(mode > 0x01) {
 		return;
 	}
-	r_state.mode = mode;
+	rast_render_state_g.mode = mode;
 }
 
 void rast_draw_2d_pixel(const int x, const int y, const uint32_t color) {
@@ -28,7 +28,7 @@ void rast_draw_2d_pixel(const int x, const int y, const uint32_t color) {
 
 // Draw a pixel with a z value
 void rast_draw_3d_pixel(const int x, const int y, const float z, const uint32_t color) {
-    if (x < 0 || x >= get_screen_width() || y < 0 || y >= get_screen_height()) return;
+    if (x < 0 || x >= get_screen_width() || y < 0 || y >= get_screen_height() || z < 0.01f) return;
     const size_t pos = y * get_screen_width() + x;
     if (z > get_backend_state()->zbuffer[pos]) return;
 
@@ -164,7 +164,7 @@ void rast_draw_triangles(const vec3 *v, ivec3 *f, const int nFaces, const uint32
             world_to_screen(v[*face[j]], pts[j]);
         }
         if (signed_triangle_area(pts[0][0], pts[0][1], pts[1][0], pts[1][1], pts[2][0], pts[2][1]))
-        switch(r_state.mode) {
+        switch(rast_render_state_g.mode) {
             case RAST_LINE_MODE:
                 rast_draw_wireframe_triangle(pts, colors[i]);
                 break;
@@ -191,16 +191,13 @@ void rast_draw_circle(const int x, const int y, const int r, const uint32_t colo
 
 // Sets
 void rast_use_buffer(Buffer_t *buffer) {
-    if (!buffer) {
-        printf("render_set_buffer called with NULL\n");
-        return;
-    }
+    if (buffer == 0) return;
     switch (buffer->type) {
         case RAST_VERTEX_BUFFER:
-            r_state.vertex_buffer = buffer;
+            rast_render_state_g.vertex_buffer = buffer;
             break;
         case RAST_INDEX_BUFFER:
-            r_state.index_buffer = buffer;
+            rast_render_state_g.index_buffer = buffer;
             break;
         default:
             printf("Unknown data type\n");
@@ -210,48 +207,60 @@ void rast_use_buffer(Buffer_t *buffer) {
 
 void rast_set_matrix(const mat4 *m) {
     if (!m) return;
-    memcpy(r_state.s_matrix, m, sizeof(mat4));
+    memcpy(rast_render_state_g.s_matrix, m, sizeof(mat4));
 }
 
 void rast_render() {
-    if (!r_state.vertex_buffer || !r_state.vertex_buffer->vertex_data) {
-        printf("Invalid vertex buffer\n");
+    // If buffers = 0 then there is no buffer binded
+    if (rast_render_state_g.index_buffer == 0 || rast_render_state_g.vertex_buffer == 0) {
         return;
     }
-    if (!r_state.index_buffer || !r_state.index_buffer->index_data) {
-        printf("Invalid index buffer\n");
-        return;
-    }
-    for (int i = 0; i < r_state.index_buffer->size_bytes; i++) {
-        ivec3 face;
-        m_ivec3_copy(r_state.index_buffer->index_data[i].index, face);
+    const size_t index_count = rast_render_state_g.index_buffer->size_bytes / sizeof(ivec3);
+    const float *vertices = rast_render_state_g.vertex_buffer->data;
+    const unsigned int *indices = rast_render_state_g.index_buffer->data;
+    for (int i = 0; i < index_count; i++) {
+        const uint32_t face[3] = {
+            indices[i * 3 + 0],
+            indices[i * 3 + 1],
+            indices[i * 3 + 2]
+        };
         vec3 pts[3];
 
-        for (int j = 0; j < 3; j++) {
-            vec4 transformed;
+        bool valid_triangle = true;
 
-            transformed[0] = r_state.vertex_buffer->vertex_data[face[j]].position[0];
-            transformed[1] = r_state.vertex_buffer->vertex_data[face[j]].position[1];
-            transformed[2] = r_state.vertex_buffer->vertex_data[face[j]].position[2];
-            transformed[3] = 1.0f;
+        for (int j = 0; j < 3; j++) {
+            const uint32_t vi = face[j] * 3;
+            vec4 transformed = {
+                vertices[vi + 0],
+                vertices[vi + 1],
+                vertices[vi + 2],
+                1.0f
+            };
 
             vec4 result;
-            glm_mat4_mulv(r_state.s_matrix, transformed, result);
+            glm_mat4_mulv(rast_render_state_g.s_matrix, transformed, result);
 
-            pts[j][0] = result[0] / result[3];
-            pts[j][1] = result[1] / result[3];
-            pts[j][2] = result[2] / result[3];
+            if (result[3] <= 0.1f) {
+                valid_triangle = false;
+                break;
+            };
+            float inv_w = 1.0f / result[3];
+            pts[j][0] = result[0] * inv_w;
+            pts[j][1] = result[1] * inv_w;
+            pts[j][2] = result[2] * inv_w;
 
             // Then convert to screen coordinates
             world_to_screen(pts[j], pts[j]);
         }
+        // Simple fix for now
+        if (!valid_triangle) continue;
 
-        switch (r_state.mode) {
+        switch (rast_render_state_g.mode) {
             case RAST_LINE_MODE:
                 rast_draw_wireframe_triangle(pts, 0xFFFFFFFF);
                 break;
             case RAST_FILL_MODE:
-                rast_draw_rasterized_triangle(pts, r_state.index_buffer->index_data[i].color);
+                rast_draw_rasterized_triangle(pts, 0xFFFFFFFF);
                 break;
             default:
                 break;
